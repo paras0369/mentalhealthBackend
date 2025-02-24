@@ -1,12 +1,23 @@
 import { Request, Response, Router } from 'express';
 import { StreamChat } from 'stream-chat';
 import { hashSync } from 'bcrypt';
-import { SALT, USERS, UserRole } from '../models/user';
+import { USERS, UserRole } from '../models/user';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const router = Router();
 
-const { STREAM_API_KEY, STREAM_API_SECRET } = process.env;
-const client = StreamChat.getInstance(STREAM_API_KEY!, STREAM_API_SECRET);
+const SALT = process.env.SALT as string;
+const streamApiKey = process.env.STREAM_API_KEY;
+const streamApiSecret = process.env.STREAM_API_SECRET;
+
+if (!streamApiKey || !streamApiSecret) {
+  throw new Error('STREAM_API_KEY and STREAM_API_SECRET must be defined in environment variables');
+}
+
+const client = StreamChat.getInstance(streamApiKey, streamApiSecret);
 
 // Register endpoint
 router.post('/register', async (req: Request, res: Response): Promise<any> => {
@@ -34,7 +45,7 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
 
   try {
     const hashed_password = hashSync(password, SALT);
-    const id = Math.random().toString(36).substr(2, 9);
+    const id = Math.random().toString(36).substring(2, 9);
     const user = {
       id,
       email,
@@ -56,6 +67,7 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
       user: {
         id: user.id,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (e) {
@@ -84,7 +96,36 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
     user: {
       id: user.id,
       email: user.email,
+      role: user.role,
     },
+  });
+});
+
+// Endpoint to create a therapist user
+router.post('/create-therapist', async (req: Request, res: Response): Promise<any> => {
+  const { email, password } = req.body;
+
+  const hashed_password = hashSync(password, SALT);
+  const id = Math.random().toString(36).substring(2, 9);
+  const user = {
+    id,
+    email,
+    hashed_password,
+    role: UserRole.Therapist,
+  };
+
+  USERS.push(user);
+
+  await client.upsertUser({
+    id,
+    email,
+    name: email,
+    role: UserRole.Therapist,
+  });
+
+  return res.json({
+    message: 'Therapist user created successfully.',
+    user,
   });
 });
 

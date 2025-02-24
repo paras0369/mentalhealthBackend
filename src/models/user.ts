@@ -1,9 +1,6 @@
-import { hashSync, genSaltSync } from 'bcrypt';
-export const SALT = genSaltSync(10);
-
 export enum UserRole {
-  Therapist = 'Therapist',
-  Client = 'Client',
+  Therapist = 'therapist',
+  Client = 'client',
 }
 
 export interface User {
@@ -13,11 +10,12 @@ export interface User {
   role: UserRole;
 }
 
+// Added only for testing purposes
 export const USERS: User[] = [
   {
-    id: '1',
-    email: 'simon@galaxies.dev',
-    hashed_password: hashSync('password', SALT), // Your hashed password here
-    role: UserRole.Therapist,
+    email: 'client@galaxies.dev',
+    id: '7z6ydcm',
+    role: UserRole.Client,
+    hashed_password: '$2b$10$.MftzcPPsR5TUTYRyWGyQu9H9Fd3Q6olBlccI1qIAY3qXH7OQ.bQO',
   },
 ];

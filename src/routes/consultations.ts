@@ -1,12 +1,12 @@
 import { Request, Response, Router } from 'express';
-import { StreamChat } from 'stream-chat';
 import { USERS, UserRole } from '../models/user';
 import { CONSULTATIONS, ConsultationStatus } from '../models/consultation';
 import { authenticateToken } from '../middleware/auth';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = Router();
-const { STREAM_API_KEY, STREAM_API_SECRET } = process.env;
-const client = StreamChat.getInstance(STREAM_API_KEY!, STREAM_API_SECRET);
 
 // Create consultation
 router.post('/', authenticateToken, async (req: Request, res: Response): Promise<any> => {
