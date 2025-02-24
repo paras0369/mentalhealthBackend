@@ -16,32 +16,42 @@ This is a simple Node API to create and sign in users with [Stream](https://gets
 
 ## Environment Setup
 
-1. Clone the repository:
+Clone the repository:
 
-`git clone https://github.com/Galaxies-dev/mental-health-api`
-`cd mental-health-api`
+```bash
+git clone https://github.com/Galaxies-dev/mental-health-api
+cd mental-health-api
+```
 
-2. Copy the `DUMMY.env` file to `.env` and fill in the following variables:
+Copy the `DUMMY.env` file to `.env` and fill in the following variables:
 
+```env
 PORT=3000
 STREAM_API_KEY=your_stream_api_key
 STREAM_API_SECRET=your_stream_api_secret
 JWT_SECRET=your_jwt_secret
+```
 
-3. Install dependencies:
+Install dependencies:
 
-`npm install`
+```bash
+npm install
+```
 
 ## Running the API
 
 Development mode:
 
-`npm run dev`
+```bash
+npm run start:dev
+```
 
 Production mode:
 
-`npm run build`
-`npm start`
+```bash
+npm run build
+npm start
+```
 
 The API will be available at `http://localhost:3000`
 
