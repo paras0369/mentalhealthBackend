@@ -18,4 +18,10 @@ export const USERS: User[] = [
     role: UserRole.Client,
     hashed_password: '$2b$10$.MftzcPPsR5TUTYRyWGyQu9H9Fd3Q6olBlccI1qIAY3qXH7OQ.bQO',
   },
+  {
+    email: 'simon@galaxies.dev',
+    id: '41m3lxk',
+    role: UserRole.Therapist,
+    hashed_password: '$2b$10$.MftzcPPsR5TUTYRyWGyQu9H9Fd3Q6olBlccI1qIAY3qXH7OQ.bQO',
+  },
 ];

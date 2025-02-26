@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { USERS } from '../models/user';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const { JWT_SECRET } = process.env;
 
@@ -26,6 +30,7 @@ export const authenticateToken = async (
   const token = authHeader.split(' ')[1];
   try {
     const { userId } = jwt.verify(token, JWT_SECRET!) as { userId: string };
+
     const user = USERS.find((u) => u.id === userId);
 
     if (!user) {
@@ -35,6 +40,7 @@ export const authenticateToken = async (
     req.user = user;
     next();
   } catch (error) {
+    console.log('🚀 ~ authenticateToken ~ error:', error);
     return res.status(401).json({ message: 'Invalid token' });
   }
 };

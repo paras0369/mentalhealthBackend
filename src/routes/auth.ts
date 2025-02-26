@@ -3,7 +3,7 @@ import { StreamChat } from 'stream-chat';
 import { hashSync } from 'bcrypt';
 import { USERS, UserRole } from '../models/user';
 import dotenv from 'dotenv';
-
+import { sign } from 'jsonwebtoken';
 // Load environment variables
 dotenv.config();
 
@@ -91,8 +91,11 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
 
   const token = client.createToken(user.id);
 
+  const jwt = sign({ userId: user.id }, process.env.JWT_SECRET!);
+
   return res.json({
     token,
+    jwt,
     user: {
       id: user.id,
       email: user.email,
