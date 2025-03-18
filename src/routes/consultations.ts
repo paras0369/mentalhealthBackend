@@ -45,7 +45,15 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
       : consultation.therapistId === user.id
   );
 
-  return res.json(userConsultations);
+  const consultationsWithClientInfo = userConsultations.map((consultation) => {
+    const client = USERS.find((user) => user.id === consultation.clientId);
+    return {
+      ...consultation,
+      clientEmail: client?.email,
+    };
+  });
+
+  return res.json(consultationsWithClientInfo);
 });
 
 // Update consultation status
