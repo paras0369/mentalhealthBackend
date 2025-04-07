@@ -1,6 +1,6 @@
 # Mental Health API
 
-This is a simple Node API to create and sign in users with [Stream](https://getstream.io/) and JWT authentication using in-memory data.
+This is a simple Node API to create and sign in users with [Stream](https://dub.sh/getstream) and JWT authentication using in-memory data.
 
 ## Features
 
