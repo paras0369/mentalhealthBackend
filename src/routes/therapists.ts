@@ -25,16 +25,16 @@ router.patch(
     if (typeof isAvailable !== "boolean") {
       res
         .status(400)
-        .json({ message: "Invalid input: isAvailable must be a boolean." });
+        .json({
+          message: "Invalid input detected: isAvailable must be a boolean.",
+        });
       return; // Use return to exit function early
     }
 
     if (therapist.role !== UserRole.Therapist) {
-      res
-        .status(403)
-        .json({
-          message: "Forbidden: Only therapists can update availability.",
-        });
+      res.status(403).json({
+        message: "Forbidden: Only therapists can update availability.",
+      });
       return; // Use return to exit function early
     }
 
