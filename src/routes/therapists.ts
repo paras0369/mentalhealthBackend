@@ -23,11 +23,9 @@ router.patch(
     const therapist = req.user as IUser;
 
     if (typeof isAvailable !== "boolean") {
-      res
-        .status(400)
-        .json({
-          message: "Invalid input detected: isAvailable must be a boolean.",
-        });
+      res.status(400).json({
+        message: "Invalid input: isAvailable must be a boolean.",
+      });
       return; // Use return to exit function early
     }
 
