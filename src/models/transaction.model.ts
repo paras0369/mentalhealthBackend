@@ -13,6 +13,7 @@ export enum TransactionType {
 export interface ITransaction extends Document {
   userId: Types.ObjectId; // User involved (Client or Therapist)
   type: TransactionType;
+
   amount: number; // Positive for income/purchase, negative for spending/withdrawal
   description?: string;
   relatedCallId?: string; // Link to CallLog (callId field)

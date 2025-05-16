@@ -4,6 +4,8 @@ import CallLog, { CallStatus, ICallLog } from "../models/callLog.model";
 import User, { IUser } from "../models/user.model";
 import { StreamClient } from "@stream-io/node-sdk";
 import crypto from "crypto";
+import Transaction, { TransactionType } from "../models/transaction.model"; // Import
+import mongoose from "mongoose";
 
 const router = Router();
 
@@ -335,6 +337,121 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
         } else {
           console.warn(
             `[Webhook] Received participant_left for ${callCID}, but no CallLog found.`
+          );
+        }
+        if (
+          callLog &&
+          callLog.status === CallStatus.Completed &&
+          callLog.durationMinutes &&
+          callLog.durationMinutes > 0 &&
+          !callLog.clientDebitedCoins
+        ) {
+          console.log(
+            `[Webhook] Call ${callCID} completed. Processing billing. Duration: ${callLog.durationMinutes} mins.`
+          );
+
+          const session = await mongoose.startSession(); // For atomic operations
+          session.startTransaction();
+
+          try {
+            const client = await User.findById(callLog.clientId).session(
+              session
+            );
+            const therapist = await User.findById(callLog.therapistId).session(
+              session
+            );
+
+            if (!client || !therapist) {
+              throw new Error("Client or Therapist not found for billing.");
+            }
+
+            const therapistRate = therapist.therapistRatePerMinute || 5; // Use therapist's rate or a default
+            callLog.coinsPerMinuteRate = therapistRate; // Store the rate used
+
+            const totalCoinsToDebit = callLog.durationMinutes * therapistRate;
+
+            if (client.creditBalance >= totalCoinsToDebit) {
+              const clientBalanceBefore = client.creditBalance;
+              client.creditBalance -= totalCoinsToDebit;
+              const clientBalanceAfter = client.creditBalance;
+
+              const therapistSharePercentage = 0.5; // Therapist gets 50%
+              const coinsForTherapist = Math.floor(
+                totalCoinsToDebit * therapistSharePercentage
+              );
+              // const platformShare = totalCoinsToDebit - coinsForTherapist; // If you track platform earnings
+
+              const therapistBalanceBefore = therapist.earningBalance;
+              therapist.earningBalance += coinsForTherapist;
+              const therapistBalanceAfter = therapist.earningBalance;
+
+              // Update CallLog
+              callLog.clientDebitedCoins = totalCoinsToDebit;
+              callLog.therapistCreditedCoins = coinsForTherapist;
+
+              // Create Transactions
+              const clientTransaction = new Transaction({
+                userId: client._id,
+                type: TransactionType.CallDebit,
+                amount: -totalCoinsToDebit, // Negative as it's a debit
+                description: `Call with therapist ${therapist.email} for ${callLog.durationMinutes} minutes.`,
+                relatedCallId: callLog.callId,
+                balanceBefore: clientBalanceBefore,
+                balanceAfter: clientBalanceAfter,
+              });
+
+              const therapistTransaction = new Transaction({
+                userId: therapist._id,
+                type: TransactionType.CallCredit,
+                amount: coinsForTherapist, // Positive as it's a credit
+                description: `Earnings from call with client ${client.email} for ${callLog.durationMinutes} minutes.`,
+                relatedCallId: callLog.callId,
+                balanceBefore: therapistBalanceBefore,
+                balanceAfter: therapistBalanceAfter,
+              });
+
+              await client.save({ session });
+              await therapist.save({ session });
+              await callLog.save({ session });
+              await clientTransaction.save({ session });
+              await therapistTransaction.save({ session });
+
+              await session.commitTransaction();
+              console.log(
+                `[Webhook] Billing processed for ${callCID}. Client debited: ${totalCoinsToDebit}, Therapist credited: ${coinsForTherapist}`
+              );
+            } else {
+              // Insufficient balance - This scenario needs careful handling.
+              // Option 1: Let the call happen, mark it as unpaid, notify admin.
+              // Option 2: (Harder) Proactively check balance and end call if low (requires real-time check during call).
+              console.warn(
+                `[Webhook] Insufficient balance for client ${client.email} for call ${callCID}. Required: ${totalCoinsToDebit}, Has: ${client.creditBalance}`
+              );
+              callLog.status = CallStatus.Failed; // Or a new status like "CompletedUnpaid"
+              callLog.clientDebitedCoins = 0;
+              callLog.therapistCreditedCoins = 0;
+              // No transactions created in this case for debit/credit
+              await callLog.save({ session });
+              await session.commitTransaction(); // Commit changes to callLog status
+              // Notify admin or client
+            }
+          } catch (billingError: any) {
+            await session.abortTransaction();
+            console.error(
+              `[Webhook] Billing Error for ${callCID}:`,
+              billingError.message
+            );
+            // Potentially update callLog to a failed billing state
+            if (callLog) {
+              callLog.status = CallStatus.Failed; // Or a specific billing_failed status
+              await callLog.save(); // Save outside transaction if aborted
+            }
+          } finally {
+            session.endSession();
+          }
+        } else if (callLog && callLog.clientDebitedCoins) {
+          console.log(
+            `[Webhook] Billing for call ${callCID} already processed. Skipping.`
           );
         }
         break;

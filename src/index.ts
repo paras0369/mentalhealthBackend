@@ -6,6 +6,8 @@ import connectDB from "./config/db";
 import authRoutes from "./routes/auth";
 import therapistRoutes from "./routes/therapists";
 import webhookRoutes from "./routes/webhooks";
+import devRoutes from "./routes/dev";
+import userRoutes from "./routes/user";
 
 dotenv.config();
 connectDB();
@@ -25,6 +27,8 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/therapists", therapistRoutes);
+app.use("/dev", devRoutes);
+app.use("/users", userRoutes);
 
 // Debug unhandled routes
 app.use((req, res) => {

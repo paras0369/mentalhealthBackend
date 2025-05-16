@@ -32,6 +32,7 @@ router.get(
         isAvailable: user.isAvailable,
         earningBalance: user.earningBalance,
         upiId: user.upiId,
+        creditBalance: user.creditBalance,
         // Add any other relevant non-sensitive fields from the IUser model here if needed
       });
     } catch (error) {

@@ -1,3 +1,4 @@
+// src/models/user.model.ts
 import mongoose, { Schema, Document } from "mongoose";
 
 export enum UserRole {
@@ -5,21 +6,20 @@ export enum UserRole {
   Client = "client",
 }
 
-// Interface representing a document in MongoDB.
 export interface IUser extends Document {
   email: string;
   hashed_password: string;
   role: UserRole;
-  streamId: string; // For Stream Chat/Video identification
-  creditBalance: number; // For clients
-  earningBalance: number; // For therapists
-  isAvailable: boolean; // For therapists
-  upiId?: string; // For therapists
+  streamId: string;
+  creditBalance: number; // COINS for clients
+  earningBalance: number; // COINS for therapists
+  isAvailable: boolean;
+  upiId?: string;
+  therapistRatePerMinute?: number; // <<<< TypeScript interface: just number
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Schema corresponding to the document interface.
 const UserSchema: Schema = new Schema(
   {
     email: {
@@ -40,41 +40,37 @@ const UserSchema: Schema = new Schema(
       default: UserRole.Client,
     },
     streamId: {
-      // Store the ID used in Stream
       type: String,
       required: true,
       unique: true,
       index: true,
     },
     creditBalance: {
-      // Relevant for clients
       type: Number,
       default: 0,
       min: 0,
     },
     earningBalance: {
-      // Relevant for therapists
       type: Number,
       default: 0,
       min: 0,
     },
     isAvailable: {
-      // Relevant for therapists
       type: Boolean,
       default: false,
     },
     upiId: {
-      // Relevant for therapists
       type: String,
       trim: true,
       default: null,
     },
+    // Mongoose schema definition for the rate
+    therapistRatePerMinute: { type: Number, min: 1, default: 5 }, // <<<< Mongoose schema
   },
   {
-    timestamps: true, // Automatically add createdAt and updatedAt
+    timestamps: true,
   }
 );
 
-// Create and export the model.
 const User = mongoose.model<IUser>("User", UserSchema);
 export default User;
