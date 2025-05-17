@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db";
+import callRoutes from "./routes/calls";
 
 import authRoutes from "./routes/auth";
 import therapistRoutes from "./routes/therapists";
@@ -29,6 +30,7 @@ app.use("/auth", authRoutes);
 app.use("/therapists", therapistRoutes);
 app.use("/dev", devRoutes);
 app.use("/users", userRoutes);
+app.use("/calls", callRoutes);
 
 // Debug unhandled routes
 app.use((req, res) => {

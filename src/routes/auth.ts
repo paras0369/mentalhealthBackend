@@ -25,9 +25,9 @@ const client = StreamChat.getInstance(streamApiKey, streamApiSecret);
 
 // Register endpoint
 router.post("/register", async (req: Request, res: Response): Promise<any> => {
-  const { email, password } = req.body;
+  const { name, email, password } = req.body;
 
-  if (!email || !password) {
+  if (!email || !password || !name) {
     return res
       .status(400)
       .json({ message: "Email and password are required." });
@@ -36,6 +36,11 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
     return res
       .status(400)
       .json({ message: "Password must be at least 6 characters." });
+  }
+  if (name.trim().length < 2) {
+    return res
+      .status(400)
+      .json({ message: "Name must be at least 2 characters." });
   }
 
   try {
@@ -52,20 +57,28 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
     await client.upsertUser({
       id: streamId,
       email: email, // Keep email in Stream profile
-      name: email, // Use email as name initially
+      name: name, // Use email as name initially
       role: UserRole.Client, // Default role for registration
     });
 
     // 2. Create user in DB
     const hashed_password = hashSync(password, SALT_ROUNDS);
     const newUser = new User({
-      email: email.toLowerCase(),
-      hashed_password,
-      streamId: streamId, // Store the Stream ID
+      name: name.trim(), // Schema field `name` gets `name` from req.body
+      email: email.toLowerCase(), // Schema field `email` gets `email` from req.body
+      hashed_password: hashed_password, // Schema field `hashed_password` gets the hashed `password` from req.body
+      streamId: streamId,
       role: UserRole.Client,
       // Default balances/availability are set by schema
     });
+    // ***************************
+
     await newUser.save();
+    console.log(
+      "[REGISTER DB SAVE] New user saved:",
+      newUser.email,
+      newUser.name
+    );
 
     // 3. Generate Tokens
     const streamToken = client.createToken(streamId);
@@ -77,6 +90,7 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
       jwt, // Your API JWT
       user: {
         id: newUser._id, // Use MongoDB ID for your API references
+        name: newUser.name,
         streamId: newUser.streamId, // Provide Stream ID for frontend client init
         email: newUser.email,
         role: newUser.role,

@@ -18,13 +18,13 @@ export interface ICallLog extends Document {
   startTime?: Date;
   endTime?: Date;
   durationMinutes?: number;
-  // This is the TypeScript interface, it should just be a number
-  coinsPerMinuteRate: number; // <<<< CORRECTED HERE
+  coinsPerMinuteRate?: number; // Assuming it's optional here
   clientDebitedCoins?: number;
   therapistCreditedCoins?: number;
-  status: CallStatus;
+  status: CallStatus; // Assuming CallStatus is an enum that resolves to string
   createdAt: Date;
   updatedAt: Date;
+  callType?: "audio" | "video" | "Unknown"; // If you added this
 }
 
 const CallLogSchema: Schema = new Schema(
