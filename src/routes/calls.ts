@@ -7,6 +7,137 @@ import { Types } from "mongoose";
 
 const router = Router();
 
+// Interface for call notifications
+interface CallNotification {
+  id: string;
+  callId: string;
+  callMode: "audio" | "video";
+  callerName: string;
+  callerStreamId: string;
+  therapistStreamId: string;
+  callRate: number;
+  createdAt: Date;
+}
+
+// In-memory store for active call notifications (in production, use Redis or database)
+const activeNotifications = new Map<string, CallNotification>();
+
+// Send notification to therapist about incoming call
+router.post(
+  "/notify-therapist",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    const user = req.user as IUser;
+    const { therapistId, callId, callMode, callerName, callRate } = req.body;
+
+    try {
+      // Verify the therapist exists and is available
+      const therapist = await User.findById(therapistId);
+      if (!therapist || therapist.role !== UserRole.Therapist) {
+        res.status(404).json({ message: "Therapist not found" });
+        return;
+      }
+
+      if (!therapist.isAvailable) {
+        res.status(400).json({ message: "Therapist is not available" });
+        return;
+      }
+
+      // Create notification
+      const notification: CallNotification = {
+        id: `${callId}_${Date.now()}`,
+        callId,
+        callMode,
+        callerName,
+        callerStreamId: user.streamId,
+        therapistStreamId: therapist.streamId,
+        callRate,
+        createdAt: new Date(),
+      };
+
+      // Store notification for the therapist
+      activeNotifications.set(therapist.streamId, notification);
+
+      console.log(
+        `[NotifyTherapist] Created notification for therapist ${therapist.email} about call ${callId}`
+      );
+
+      // Auto-cleanup notification after 30 seconds if not handled
+      setTimeout(() => {
+        if (activeNotifications.has(therapist.streamId)) {
+          activeNotifications.delete(therapist.streamId);
+          console.log(
+            `[NotifyTherapist] Auto-cleaned up notification for ${therapist.email}`
+          );
+        }
+      }, 30000);
+
+      res.status(200).json({ message: "Notification sent successfully" });
+    } catch (error: any) {
+      console.error("Error sending notification:", error);
+      res.status(500).json({ message: "Failed to send notification" });
+    }
+  }
+);
+
+// Get pending notifications for the authenticated therapist
+router.get(
+  "/pending-notifications",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    const user = req.user as IUser;
+
+    try {
+      if (user.role !== UserRole.Therapist) {
+        res
+          .status(403)
+          .json({ message: "Only therapists can check for notifications" });
+        return;
+      }
+
+      const notification = activeNotifications.get(user.streamId);
+      const notifications = notification ? [notification] : [];
+
+      res.status(200).json(notifications);
+    } catch (error: any) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  }
+);
+
+// Clear notification after therapist responds
+router.delete(
+  "/clear-notification/:notificationId",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    const user = req.user as IUser;
+    const { notificationId } = req.params;
+
+    try {
+      if (user.role !== UserRole.Therapist) {
+        res
+          .status(403)
+          .json({ message: "Only therapists can clear notifications" });
+        return;
+      }
+
+      // Find and remove the notification
+      const notification = activeNotifications.get(user.streamId);
+      if (notification && notification.id === notificationId) {
+        activeNotifications.delete(user.streamId);
+        console.log(
+          `[ClearNotification] Cleared notification ${notificationId} for therapist ${user.email}`
+        );
+      }
+
+      res.status(200).json({ message: "Notification cleared" });
+    } catch (error: any) {
+      console.error("Error clearing notification:", error);
+      res.status(500).json({ message: "Failed to clear notification" });
+    }
+  }
+);
 // Interface for the plain JavaScript object after .lean() and population
 interface PopulatedCallLogLean {
   _id: Types.ObjectId | string; // Accommodate if it's already a string or allow conversion
@@ -100,12 +231,10 @@ router.get(
       res.status(200).json(formattedHistory);
     } catch (error: any) {
       console.error("Error fetching call history:", error);
-      res
-        .status(500)
-        .json({
-          message: "Server error fetching call history.",
-          details: error.message,
-        });
+      res.status(500).json({
+        message: "Server error fetching call history.",
+        details: error.message,
+      });
     }
   }
 );
